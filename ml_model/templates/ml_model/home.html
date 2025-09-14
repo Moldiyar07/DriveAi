@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>inDrive AI: Check Car Condition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.2em;
+            font-weight: bold;
+        }
+
+        .upload-area {
+            border: 3px dashed #007bff;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 30px;
+            background-color: #f8f9fa;
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+            cursor: pointer;
+        }
+
+        .upload-area:hover {
+            background-color: #e9f0ff;
+            border-color: #0056b3;
+        }
+
+        .upload-area.dragover {
+            background-color: #e9f0ff;
+            border-color: #0056b3;
+            transform: scale(1.02);
+        }
+
+        .upload-text {
+            color: #007bff;
+            font-size: 1.2em;
+            margin-bottom: 10px;
+        }
+
+        .upload-hint {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .preview-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .preview-image {
+            max-width: 300px;
+            max-height: 300px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .preview-image:hover {
+            transform: scale(1.05);
+        }
+
+        .predict-button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.1em;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            margin: 20px auto;
+            display: block;
+            font-weight: bold;
+        }
+
+        .predict-button:hover {
+            background-color: #218838;
+            transform: translateY(-2px);
+        }
+
+        .predict-button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #007bff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .result-container {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .result-success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .result-warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+
+        .result-danger {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .result-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .result-item {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: rgba(255, 255, 255, 0.7);
+        }
+
+        .badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9em;
+            margin-left: 10px;
+        }
+
+        .badge-success {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .badge-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .confidence-bar {
+            background-color: #e9ecef;
+            border-radius: 10px;
+            height: 20px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #dc3545 0%, #ffc107 50%, #28a745 100%);
+            border-radius: 10px;
+            transition: width 0.5s ease;
+        }
+
+        .explanation {
+            margin-top: 15px;
+            padding: 15px;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 5px;
+            font-style: italic;
+            border-left: 4px solid #007bff;
+        }
+
+        .error-message {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            border: 1px solid #f5c6cb;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 1.8em;
+            }
+
+            .upload-area {
+                padding: 30px 20px;
+            }
+
+            .predict-button {
+                width: 100%;
+                padding: 18px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>inDrive AI: Check Car Condition</h1>
+        
+        <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+            <div class="upload-text">📸 Нажмите или перетащите фото автомобиля</div>
+            <div class="upload-hint">Поддерживаемые форматы: JPG, PNG, GIF (макс. 5MB)</div>
+        </div>
+        
+        <input type="file" id="fileInput" accept="image/*" onchange="previewImage()">
+        
+        <div class="preview-container" id="previewContainer">
+            <img id="previewImage" class="preview-image" style="display: none;">
+        </div>
+        
+        <button class="predict-button" id="predictButton" onclick="predictImage()" disabled>
+            🔍 Анализировать фото
+        </button>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <div>Анализируем изображение...</div>
+        </div>
+        
+        <div class="result-container" id="resultContainer">
+            <div class="result-title">Результаты анализа</div>
+            <div id="resultContent"></div>
+        </div>
+    </div>
+
+    <script>
+        let selectedFile = null;
+
+        // Обработка drag and drop
+        const uploadArea = document.querySelector('.upload-area');
+        
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                const file = files[0];
+                if (file.type.startsWith('image/')) {
+                    selectedFile = file;
+                    previewImage(file);
+                } else {
+                    alert('Пожалуйста, выберите файл изображения');
+                }
+            }
+        });
+
+        function previewImage(file) {
+            const fileInput = document.getElementById('fileInput');
+            const previewImage = document.getElementById('previewImage');
+            const previewContainer = document.getElementById('previewContainer');
+            const predictButton = document.getElementById('predictButton');
+            
+            if (!file) {
+                file = fileInput.files[0];
+            }
+            
+            if (file) {
+                // Проверяем размер файла (5MB)
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('Размер файла не должен превышать 5MB');
+                    return;
+                }
+                
+                selectedFile = file;
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    previewImage.src = e.target.result;
+                    previewImage.style.display = 'block';
+                    predictButton.disabled = false;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        async function predictImage() {
+            if (!selectedFile) {
+                alert('Пожалуйста, выберите изображение');
+                return;
+            }
+
+            const predictButton = document.getElementById('predictButton');
+            const loading = document.getElementById('loading');
+            const resultContainer = document.getElementById('resultContainer');
+            
+            // Показываем загрузку
+            predictButton.disabled = true;
+            loading.style.display = 'block';
+            resultContainer.style.display = 'none';
+            
+            try {
+                // Создаем FormData для отправки файла
+                const formData = new FormData();
+                formData.append('image', selectedFile);
+                
+                // Отправляем POST запрос
+                const response = await fetch('/predict/', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    displayResults(data);
+                } else {
+                    displayError(data.error || 'Произошла ошибка при анализе изображения');
+                }
+                
+            } catch (error) {
+                displayError('Ошибка соединения с сервером: ' + error.message);
+            } finally {
+                // Скрываем загрузку
+                predictButton.disabled = false;
+                loading.style.display = 'none';
+            }
+        }
+
+        function displayResults(data) {
+            const resultContainer = document.getElementById('resultContainer');
+            const resultContent = document.getElementById('resultContent');
+            
+            // Определяем стиль результата
+            let containerClass = 'result-warning';
+            if (data.clean && data.intact) {
+                containerClass = 'result-success';
+            } else if (!data.clean && !data.intact) {
+                containerClass = 'result-danger';
+            }
+            
+            resultContainer.className = `result-container ${containerClass}`;
+            
+            // Формируем HTML с результатами
+            const cleanBadge = data.clean ? 
+                '<span class="badge badge-success">Чистое</span>' : 
+                '<span class="badge badge-danger">Грязное</span>';
+                
+            const intactBadge = data.intact ? 
+                '<span class="badge badge-success">Целое</span>' : 
+                '<span class="badge badge-danger">Повреждено</span>';
+            
+            const confidenceWidth = Math.min(data.confidence, 100);
+            
+            resultContent.innerHTML = `
+                <div class="result-item">
+                    <strong>Состояние чистоты:</strong> ${cleanBadge}
+                </div>
+                <div class="result-item">
+                    <strong>Целостность кузова:</strong> ${intactBadge}
+                </div>
+                <div class="result-item">
+                    <strong>Уверенность модели:</strong> ${data.confidence}%
+                    <div class="confidence-bar">
+                        <div class="confidence-fill" style="width: ${confidenceWidth}%"></div>
+                    </div>
+                </div>
+                <div class="explanation">
+                    <strong>💡 Рекомендация:</strong><br>
+                    ${data.explanation}
+                </div>
+            `;
+            
+            resultContainer.style.display = 'block';
+            
+            // Анимируем появление
+            resultContainer.style.opacity = '0';
+            resultContainer.style.transform = 'translateY(20px)';
+            setTimeout(() => {
+                resultContainer.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                resultContainer.style.opacity = '1';
+                resultContainer.style.transform = 'translateY(0)';
+            }, 100);
+        }
+
+        function displayError(message) {
+            const resultContainer = document.getElementById('resultContainer');
+            const resultContent = document.getElementById('resultContent');
+            
+            resultContainer.className = 'result-container';
+            resultContent.innerHTML = `<div class="error-message">❌ ${message}</div>`;
+            resultContainer.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
